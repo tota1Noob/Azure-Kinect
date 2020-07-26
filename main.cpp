@@ -389,7 +389,7 @@ void DrawCenterPoints(cv::Mat& colorMat);
 //²âÊÔGetXYZAtCameraViewº¯Êý
 void TestGetXYZAtCameraView();
 k4a::KinectAPI kinect;
-int main5()
+int main()
 {
 	
 	string caliberation_camera_file = "caliberation_camera.xml";
@@ -659,7 +659,7 @@ int main2()
 	}
     return 0;
 }
-int main()
+int main5()
 {
 	bool useRobot = FALSE;
 	
