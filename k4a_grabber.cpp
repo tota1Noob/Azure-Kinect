@@ -189,7 +189,7 @@ void k4a::KinectAPI::ShowOpenCVImage(cv::Mat Img, std::string name,int waitkey)
 	 cv::setWindowProperty("name", cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
 	cv::imshow("name", Img);
 	cv::waitKey(waitkey);
-	//cv::destroyAllWindows();
+	cv::destroyAllWindows();
 }
 //depth已转到RGB相机视角
 void k4a::KinectAPI::GetOpenCVImage(cv::Mat& colorMat, cv::Mat& depthMat, cv::Mat& depthcolorMat, cv::Mat& irMat, bool isDepth2Color)

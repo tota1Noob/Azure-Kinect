@@ -485,7 +485,8 @@ int main()
 			//cout << "finished ori" << endl;
 
 			kinect.ShowOpenCVImage(colorMatRevise, "color", 0);
-			kinect.ShowOpenCVImage(depthcolorMat, "depthcolor", 0);
+			//kinect.ShowOpenCVImage(colorMat, "color", 0);
+			//kinect.ShowOpenCVImage(depthcolorMat, "depthcolor", 0);
 			//kinect.ShowOpenCVImage(irMat_, "ir");
 			while (1)
 			{
@@ -508,7 +509,9 @@ int main()
 					name = "imgs/img" + std::to_string(real_cnt);
 				cv::imwrite(name + "_depth.png", depthMat);
 				cv::imwrite(name + "_depthcolor.png", depthcolorMat);
-				cv::imwrite(name + "_color.png", colorMatRevise);
+				cv::imwrite(name + "_colorRevise.png", colorMatRevise);
+				cv::imwrite(name + "_color.png", colorMat);
+				cv::imwrite(name + "_colorOld.png", colorMatOld);
 				real_cnt++;
 				printf("第%d张图片保存成功，按任意键继续拍照\n", real_cnt);
 				system("pause");
