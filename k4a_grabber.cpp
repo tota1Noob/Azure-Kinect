@@ -182,7 +182,6 @@ void k4a::KinectAPI::ReleaseDevice()
     k4a_device_stop_cameras(device);
     k4a_device_close(device);
 }
-//TODO:¿ÉÑ¡Ôñ
 void k4a::KinectAPI::ShowOpenCVImage(cv::Mat Img, std::string name,int waitkey)
 {
 	cv::namedWindow("name", CV_WINDOW_NORMAL);  

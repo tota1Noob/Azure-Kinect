@@ -401,10 +401,37 @@ void DeleteBadObejct(Object *ObjectRes, int &iObj_num)
 void DrawCenterPoints(cv::Mat& colorMat);
 //测试GetXYZAtCameraView函数
 void TestGetXYZAtCameraView();
-k4a::KinectAPI kinect;
+void GetAllFormatFiles(string path, vector<string>& files, string format)
+{
+	//文件句柄      
+	//long   hFile = 0;//win7使用
+	intptr_t hFile = 0;//win10使用
+					   //文件信息      
+	struct _finddata_t fileinfo;
+	string p;
+	if ((hFile = _findfirst(p.assign(path).append("\\*" + format).c_str(), &fileinfo)) != -1)
+	{
+		do
+		{
+			if ((fileinfo.attrib &  _A_SUBDIR))
+			{
+				if (strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0)
+				{
+					//files.push_back(p.assign(path).append("\\").append(fileinfo.name) );    
+					GetAllFormatFiles(p.assign(path).append("\\").append(fileinfo.name), files, format);
+				}
+			}
+			else
+			{
+				files.push_back(p.assign(path).append("\\").append(fileinfo.name));//将文件路径保存
+			}
+		} while (_findnext(hFile, &fileinfo) == 0);
+		_findclose(hFile);
+	}
+}
+
 int main()
 {
-	bool useRobot = true;
 	
 	string caliberation_camera_file = "caliberation_camera.xml";
 	string Homo_cam2base_file = "Homo_cam2base.xml";
@@ -438,54 +465,56 @@ int main()
 	/*将单应矩阵转化为旋转矩阵和平移向量方便接下来运算*/
 	HomogeneousMtr2RT(depth_Homo_base2cam, depth_R_base2cam, depth_t_base2cam);
 
-	SocketRobot* sr = NULL;
-	if (useRobot)
-		sr = new SocketRobot();
-	
-	kinect.GetRotationAndTranslationFromDepth2Color(Depth2ColorRotation, Depth2ColorTranslation);
-
-	cv::Mat Homo_depth2color = RT2HomogeneousMatrix(Depth2ColorRotation, Depth2ColorTranslation);
-
 
 	cv::Mat point2D(3, 1, CV_32F, cv::Scalar(0)); 
 	point2D.at<float>(2, 0) = 1;
 	cv::Mat point3D;
 	//cv::Mat point3D = color_R_cam2base.t() * (depthCameraMatrix.inv() * Zc * point2D - t_cam2base);
 
+	string filePath = "D:\\Code\\c++\\Azure Kinect\\BoxData";
+	vector<string> color_imgName, depth_imgName, color_imgPath, depth_imgPath;
+	GetAllFormatFiles(filePath, color_imgPath, "Revise.png");
+	GetAllFormatFiles(filePath, depth_imgPath, "depth.png");
 	int cnt = 0;
-	while(1)
+	for(int i =0;i<color_imgPath.size();i++)
 	{ 
 
-			kinect.GetOpenCVImage(colorMatOld, depthMatOld, depthcolorMatOld, irMat, FALSE);
+			//kinect.GetOpenCVImage(colorMatOld, depthMatOld, depthcolorMatOld, irMat, FALSE);
 			///*根据内参和畸变系数校正图像*/
-			undistort(depthMatOld,depthMat,depthCameraMatrix,depthDistCoeffs);  
-			undistort(depthcolorMatOld,depthcolorMat,depthCameraMatrix,depthDistCoeffs);  
-			undistort(colorMatOld,colorMat,colorCameraMatrix,colorDistCoeffs);  
+			//undistort(depthMatOld,depthMat,depthCameraMatrix,depthDistCoeffs);  
+			//undistort(depthcolorMatOld,depthcolorMat,depthCameraMatrix,depthDistCoeffs);  
+			//undistort(colorMatOld,colorMat,colorCameraMatrix,colorDistCoeffs);  
 			//kinect.ShowOpenCVImage(colorMat, "color");
 			//kinect.ShowOpenCVImage(colorMatOld, "color");
 			//kinect.ShowOpenCVImage(depthcolorMat, "depthcolor");
 			//kinect.ShowOpenCVImage(depthcolorMatOld, "depthcolor");
 			//将depth转化为color视角
 			cv::Mat colorMatRevise(depthMat.rows, depthMat.cols, CV_8UC4, cv::Scalar(0));
+			colorMatRevise = cv::imread(color_imgPath[i], cv::IMREAD_ANYCOLOR);
+			cv::imshow("1", colorMatRevise);
+			cv::waitKey(0);
+			depthMat = cv::imread(depth_imgPath[i], cv::IMREAD_ANYDEPTH);
+			cv::imshow("2", depthMat);
+			cv::waitKey(0);
 
-			for(int i = 0; i < depthMat.rows;i++)
-				for (int j = 0; j < depthMat.cols; j++)
-				if(depthMat.at<UINT16>(i,j)!=0)
-				{
-					point2D.at<float>(0, 0) = j;
-					point2D.at<float>(1, 0) = i;
-					//从depth的图像坐标系转化为depth相机坐标系
-					point3D = depthCameraMatrix.inv() * point2D * depthMat.at<UINT16>(i, j);
-					point3D = Depth2ColorRotation * point3D + Depth2ColorTranslation;
-					//cout << j << " " << i << " " << depthMat.at<UINT16>(i, j) << endl;
-					point2D = colorCameraMatrix * point3D / point3D.at<float>(2, 0);
-					int new_i = point2D.at<float>(0, 1), new_j = point2D.at<float>(0, 0);
-					if (new_i >= 0 && new_j >= 0 && new_i < colorMat.rows && new_j < colorMat.cols)
-					{
-						colorMatRevise.at<UINT32>(i, j) = colorMat.at<UINT32>(new_i, new_j);
-						//cout << depthcolorMat.at<UINT32>(new_i, new_j) << endl;
-					}
-				}
+			//for(int i = 0; i < depthMat.rows;i++)
+			//	for (int j = 0; j < depthMat.cols; j++)
+			//	if(depthMat.at<UINT16>(i,j)!=0)
+			//	{
+			//		point2D.at<float>(0, 0) = j;
+			//		point2D.at<float>(1, 0) = i;
+			//		//从depth的图像坐标系转化为depth相机坐标系
+			//		point3D = depthCameraMatrix.inv() * point2D * depthMat.at<UINT16>(i, j);
+			//		point3D = Depth2ColorRotation * point3D + Depth2ColorTranslation;
+			//		//cout << j << " " << i << " " << depthMat.at<UINT16>(i, j) << endl;
+			//		point2D = colorCameraMatrix * point3D / point3D.at<float>(2, 0);
+			//		int new_i = point2D.at<float>(0, 1), new_j = point2D.at<float>(0, 0);
+			//		if (new_i >= 0 && new_j >= 0 && new_i < colorMat.rows && new_j < colorMat.cols)
+			//		{
+			//			colorMatRevise.at<UINT32>(i, j) = colorMat.at<UINT32>(new_i, new_j);
+			//			//cout << depthcolorMat.at<UINT32>(new_i, new_j) << endl;
+			//		}
+			//	}
 
 			//kinect.ShowOpenCVImage(colorMat, "img_color");
 			//kinect.ShowOpenCVImage(colorMatRevise, "img_color");
@@ -505,12 +534,8 @@ int main()
 			string name = "imgs/img" + std::to_string(cnt);
 			double* x_axis, * y_axis, * z_axis;
 			colorMatRevise = processImg(colorMatRevise, depthMat, masks, center, x_axis, y_axis, z_axis, highestPlanePoints_3D, vertices);
-			kinect.ShowOpenCVImage(colorMatRevise, "depthcolor", useRobot);
-			if (highestPlanePoints_3D.size() == 0)
-			{
-				Sleep(1000);
-				continue;
-			}
+			cv::imshow("2", colorMatRevise);
+			cv::waitKey(0);
 
 			//cv::imwrite(name + "_depth.png", depthMat);
 			//cv::imwrite(name + "_depthcolor.png", colorMatRevise);
@@ -533,28 +558,33 @@ int main()
 			//cv::Mat vector_z = eigenvectors.rowRange(0, 1).cross(eigenvectors.rowRange(1, 2)).reshape(0, 3);
 			//vector_z.copyTo(eigenvectors.col(2));
 			//cout << eigenvectors.rowRange(0, 1).cross(eigenvectors.rowRange(1, 2)) << endl;
-			//cout << eigenvectors << endl;
-			//cv::Mat centerMat = (cv::Mat_<float>(3, 1) << center[0], center[1], center[2]);
-			//cout << centerMat << endl;
-			//cv::Mat express2depthHomo = RT2HomogeneousMatrix(eigenvectors, centerMat);
-			//cout << depth_Homo_cam2base << " " << express2depthHomo << endl;
-			//cv::Mat express2roboticHomo = depth_Homo_cam2base * express2depthHomo;
-			//cout << express2roboticHomo << endl;
-			//cv::Mat express2roboticRotation, express2roboticTranslation;
-			//HomogeneousMtr2RT(express2roboticHomo, express2roboticRotation, express2roboticTranslation);
-			//if (express2roboticRotation.at<float>(2, 2) < 0)
-			//{
-			//	express2roboticRotation.at<float>(2, 2) *= -1;
-			//	express2roboticRotation.at<float>(1, 2) *= -1;
-			//	express2roboticRotation.at<float>(0, 2) *= -1;
-			//}
+			cv::Mat centerMat = (cv::Mat_<float>(3, 1) << center[0], center[1], center[2]);
+			cv::Mat eigenvectors = (cv::Mat_<float>(3, 3)<< x_axis[0], y_axis[0], z_axis[0],
+				x_axis[1], y_axis[1], z_axis[1], 
+				x_axis[2], y_axis[2], z_axis[2]);
+			cout << x_axis[0] << " " << x_axis[1] << " " << x_axis[2] << endl;
+			cout << eigenvectors << endl;
+
+			cout << centerMat << endl;
+			cv::Mat express2depthHomo = RT2HomogeneousMatrix(eigenvectors, centerMat);
+			cout << depth_Homo_cam2base << " " << express2depthHomo << endl;
+			cv::Mat express2roboticHomo = depth_Homo_cam2base * express2depthHomo;
+			cout << express2roboticHomo << endl;
+			cv::Mat express2roboticRotation, express2roboticTranslation;
+			HomogeneousMtr2RT(express2roboticHomo, express2roboticRotation, express2roboticTranslation);
+			if (express2roboticRotation.at<float>(2, 2) < 0)
+			{
+				express2roboticRotation.at<float>(2, 2) *= -1;
+				express2roboticRotation.at<float>(1, 2) *= -1;
+				express2roboticRotation.at<float>(0, 2) *= -1;
+			}
 			//cv::Mat vector_y = express2roboticRotation.rowRange(0, 1).cross(express2roboticRotation.rowRange(2, 3)).reshape(0, 3);
 			//vector_y.copyTo(express2roboticRotation.col(1));
-			//cv::Vec3f eulerAngles = rotationMatrixToEulerAngles(express2roboticRotation);
-			//cout << "坐标为" << endl;
-			//cout << express2roboticTranslation << endl;
-			//cout << "欧拉角为" << endl;
-			//cout << eulerAngles << endl;
+			cv::Vec3f eulerAngles1 = rotationMatrixToEulerAngles(express2roboticRotation);
+			cout << "坐标为" << endl;
+			cout << express2roboticTranslation << endl;
+			cout << "欧拉角为" << endl;
+			cout << eulerAngles1<< endl;
 			//cv::waitKey(0);
 			//int iObj_num = ObjectLocation(colorCameraMatrix, (UINT16*)colorMat.data, iDistance, depthMatRevise.cols, depthMatRevise.rows,0, depthMatRevise.rows, ObjectRes);
 			//DeleteBadObejct(ObjectRes, iObj_num);
@@ -610,7 +640,7 @@ int main()
 				
 				cout << "坐标为:" << endl;
 				cout << point3D << endl;
-				cout << "物体的欧拉角为" << endl;
+				cout << "old物体的欧拉角为" << endl;
 				cout << eulerAngles << endl;
 				
 				float coords[12];
@@ -633,8 +663,6 @@ int main()
 				coords[10] = 0;
 				coords[11] = 0;
 
-				if(useRobot)
-					sr->moveRobot(coords);
 
 	}
 return 0;
@@ -658,7 +686,6 @@ void TestGetXYZAtCameraView()
 				cv::Point2i point2D(x, y);
 				cv::Point3f point3D;
 				//kinect.GetXYZAtCameraView(point2D, img_depth.at<UINT16>(point2D.x, point2D.y), point3D);
-				kinect.GetXYZAtCameraView(point2D, 1000, point3D);
 				if (abs(point3D.x) < 5 && abs(point3D.y) < 5)
 				{
 					cout << x << " " << y << endl;
@@ -672,7 +699,6 @@ void TestGetXYZAtCameraView()
 		{
 			Draw_Polygon(img_depthcolor.data, img_depthcolor.cols, img_depthcolor.rows, 4, ObjectRes[i].R, 0, 0, 255);
 		}
-		kinect.ShowOpenCVImage(img_depthcolor, "depthcolor", 0);
 	}
 }
 void DrawCenterPoints(cv::Mat& colorMat)
